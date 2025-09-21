@@ -34,10 +34,7 @@ def create_tour(db: Session, tour: schemas.TourCreate):
 
 
 def create_tour_waypoint(
-    db: Session,
-    waypoint: schemas.WaypointCreate,
-    tour_id: int,
-    audio_filename: str = None,
+    db: Session, waypoint: schemas.WaypointCreate, tour_id: int, audio_filename: str
 ):
     db_waypoint = models.Waypoint(
         **waypoint.model_dump(), tour_id=tour_id, audio_filename=audio_filename

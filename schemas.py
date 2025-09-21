@@ -2,21 +2,27 @@
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, root_validator
 
 
 # --- Waypoint Schemas ---
 class WaypointBase(BaseModel):
-    latitude: float
-    longitude: float
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class WaypointCreate(WaypointBase):
-    pass
+    address: Optional[str] = None
 
-
-class WaypointCreateFromAddress(BaseModel):
-    address: str
+    @root_validator(pre=True)
+    def check_at_least_one_location_field(cls, values):
+        if not (
+            values.get("latitude") is not None and values.get("longitude") is not None
+        ) and not values.get("address"):
+            raise ValueError(
+                "Either 'latitude' and 'longitude' or 'address' must be provided"
+            )
+        return values
 
 
 class Waypoint(WaypointBase):
