@@ -11,9 +11,12 @@ class WaypointBase(BaseModel):
     longitude: float
 
 
-# ADD THIS NEW CLASS
 class WaypointCreate(WaypointBase):
     pass
+
+
+class WaypointCreateFromAddress(BaseModel):
+    address: str
 
 
 class Waypoint(WaypointBase):
