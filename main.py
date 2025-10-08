@@ -6,12 +6,35 @@ from typing import List, Optional
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
 from geopy.geocoders import Nominatim
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 
 import crud
 import models
 import schemas
 from database import SessionLocal, engine
+
+
+# Automatic migration - add name column if it doesn't exist
+def migrate_database():
+    inspector = inspect(engine)
+    columns = [col["name"] for col in inspector.get_columns("waypoints")]
+
+    if "name" not in columns:
+        print("🔄 Adding 'name' column to waypoints table...")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE waypoints ADD COLUMN name TEXT"))
+            conn.commit()
+        print("✅ Migration completed!")
+    else:
+        print("✅ Database schema is up to date")
+
+
+# Run migration before creating tables
+try:
+    migrate_database()
+except Exception as e:
+    print(f"Migration note: {e}")
 
 models.Base.metadata.create_all(bind=engine)
 
