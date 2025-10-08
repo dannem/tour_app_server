@@ -1,5 +1,3 @@
-# File: tour_app_server/models.py
-
 from sqlalchemy import Column, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
@@ -20,7 +18,7 @@ class Waypoint(Base):
     __tablename__ = "waypoints"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=True)  # Added name field
+    name = Column(String, nullable=True)
     latitude = Column(Float)
     longitude = Column(Float)
     audio_filename = Column(String, nullable=True)

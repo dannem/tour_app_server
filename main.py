@@ -1,9 +1,8 @@
-# File: tour_app_server/main.py
-
 import os
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from geopy.geocoders import Nominatim
 from sqlalchemy import inspect, text
@@ -17,28 +16,40 @@ from database import SessionLocal, engine
 
 # Automatic migration - add name column if it doesn't exist
 def migrate_database():
-    inspector = inspect(engine)
-    columns = [col["name"] for col in inspector.get_columns("waypoints")]
+    try:
+        inspector = inspect(engine)
+        columns = [col["name"] for col in inspector.get_columns("waypoints")]
 
-    if "name" not in columns:
-        print("🔄 Adding 'name' column to waypoints table...")
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE waypoints ADD COLUMN name TEXT"))
-            conn.commit()
-        print("✅ Migration completed!")
-    else:
-        print("✅ Database schema is up to date")
+        if "name" not in columns:
+            print("🔄 Adding 'name' column to waypoints table...")
+            with engine.connect() as conn:
+                conn.execute(text("ALTER TABLE waypoints ADD COLUMN name TEXT"))
+                conn.commit()
+            print("✅ Migration completed!")
+        else:
+            print("✅ Database schema is up to date")
+    except Exception as e:
+        print(f"⚠️  Migration error (this is OK if tables don't exist yet): {e}")
 
 
 # Run migration before creating tables
-try:
-    migrate_database()
-except Exception as e:
-    print(f"Migration note: {e}")
-
+migrate_database()
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Create uploads directory if it doesn't exist
+if not os.path.exists("uploads"):
+    os.makedirs("uploads")
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
@@ -47,12 +58,7 @@ geolocator = Nominatim(user_agent="tour_app")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Tour App API"}
-
-
-# Create uploads directory if it doesn't exist
-if not os.path.exists("uploads"):
-    os.makedirs("uploads")
+    return {"message": "Welcome to the Tour App API", "status": "running"}
 
 
 # Dependency to get a database session
@@ -83,11 +89,10 @@ def read_tour(tour_id: int, db: Session = Depends(get_db)):
     return db_tour
 
 
-# UPDATED WAYPOINT ENDPOINT - NOW ACCEPTS NAME
 @app.post("/tours/{tour_id}/waypoints", response_model=schemas.Waypoint)
 async def create_waypoint_for_tour(
     tour_id: int,
-    name: str = Form(...),  # Added name field
+    name: str = Form("Unnamed Waypoint"),  # Default value if not provided
     latitude: float = Form(...),
     longitude: float = Form(...),
     audio_file: UploadFile = File(...),
@@ -105,9 +110,7 @@ async def create_waypoint_for_tour(
 
     # Create the waypoint schema and save it to the database
     waypoint_data = schemas.WaypointCreate(
-        name=name,  # Added name
-        latitude=latitude,
-        longitude=longitude,
+        name=name, latitude=latitude, longitude=longitude
     )
     return crud.create_tour_waypoint(
         db=db,
@@ -117,12 +120,11 @@ async def create_waypoint_for_tour(
     )
 
 
-# NEW ENDPOINT FOR ADDING WAYPOINTS FROM HOME
 @app.post("/tours/{tour_id}/waypoints/from_home", response_model=schemas.Waypoint)
 async def create_waypoint_from_home(
     tour_id: int,
     audio_file: UploadFile = File(...),
-    name: Optional[str] = Form(None),  # Added name field
+    name: Optional[str] = Form("Home"),
     address: Optional[str] = Form(None),
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
@@ -141,8 +143,8 @@ async def create_waypoint_from_home(
                 )
             latitude = location.latitude
             longitude = location.longitude
-        except Exception:
-            raise HTTPException(status_code=500, detail="Geocoding service error")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Geocoding service error: {e}")
     elif latitude is None or longitude is None:
         raise HTTPException(
             status_code=400,
@@ -154,9 +156,7 @@ async def create_waypoint_from_home(
         file_object.write(await audio_file.read())
 
     waypoint_data = schemas.WaypointCreate(
-        name=name or "Unnamed Waypoint",  # Use provided name or default
-        latitude=latitude,
-        longitude=longitude,
+        name=name, latitude=latitude, longitude=longitude
     )
     return crud.create_tour_waypoint(
         db=db,

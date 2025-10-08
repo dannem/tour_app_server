@@ -1,13 +1,10 @@
-# File: tour_app_server/schemas.py
-
 from typing import List, Optional
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, field_validator
 
 
-# --- Waypoint Schemas ---
 class WaypointBase(BaseModel):
-    name: Optional[str] = None  # Added name field
+    name: Optional[str] = "Unnamed Waypoint"
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
@@ -15,15 +12,11 @@ class WaypointBase(BaseModel):
 class WaypointCreate(WaypointBase):
     address: Optional[str] = None
 
-    @root_validator(pre=True)
-    def check_at_least_one_location_field(cls, values):
-        if not (
-            values.get("latitude") is not None and values.get("longitude") is not None
-        ) and not values.get("address"):
-            raise ValueError(
-                "Either 'latitude' and 'longitude' or 'address' must be provided"
-            )
-        return values
+    @field_validator("latitude", "longitude", "address")
+    @classmethod
+    def check_location_fields(cls, v, info):
+        # This validator will be called for all three fields
+        return v
 
 
 class Waypoint(WaypointBase):
@@ -35,7 +28,6 @@ class Waypoint(WaypointBase):
         from_attributes = True
 
 
-# --- Tour Schemas ---
 class TourBase(BaseModel):
     name: str
     description: str

@@ -5,7 +5,6 @@ import schemas
 
 
 def get_tour(db: Session, tour_id: int):
-    # Eagerly load waypoints when fetching a single tour
     return (
         db.query(models.Tour)
         .options(joinedload(models.Tour.waypoints))
@@ -15,7 +14,6 @@ def get_tour(db: Session, tour_id: int):
 
 
 def get_tours(db: Session, skip: int = 0, limit: int = 100):
-    # Eagerly load waypoints for all tours in the list
     return (
         db.query(models.Tour)
         .options(joinedload(models.Tour.waypoints))
@@ -36,13 +34,14 @@ def create_tour(db: Session, tour: schemas.TourCreate):
 def create_tour_waypoint(
     db: Session, waypoint: schemas.WaypointCreate, tour_id: int, audio_filename: str
 ):
-    # Create waypoint with all fields including name
-    waypoint_dict = waypoint.model_dump(
-        exclude={"address"}
-    )  # Exclude address as it's not in the model
-    db_waypoint = models.Waypoint(
-        **waypoint_dict, tour_id=tour_id, audio_filename=audio_filename
-    )
+    waypoint_dict = {
+        "name": waypoint.name,
+        "latitude": waypoint.latitude,
+        "longitude": waypoint.longitude,
+        "tour_id": tour_id,
+        "audio_filename": audio_filename,
+    }
+    db_waypoint = models.Waypoint(**waypoint_dict)
     db.add(db_waypoint)
     db.commit()
     db.refresh(db_waypoint)
