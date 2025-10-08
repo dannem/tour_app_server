@@ -7,6 +7,7 @@ from pydantic import BaseModel, root_validator
 
 # --- Waypoint Schemas ---
 class WaypointBase(BaseModel):
+    name: Optional[str] = None  # Added name field
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 

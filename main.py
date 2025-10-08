@@ -60,10 +60,11 @@ def read_tour(tour_id: int, db: Session = Depends(get_db)):
     return db_tour
 
 
-# UPDATED WAYPOINT ENDPOINT
+# UPDATED WAYPOINT ENDPOINT - NOW ACCEPTS NAME
 @app.post("/tours/{tour_id}/waypoints", response_model=schemas.Waypoint)
 async def create_waypoint_for_tour(
     tour_id: int,
+    name: str = Form(...),  # Added name field
     latitude: float = Form(...),
     longitude: float = Form(...),
     audio_file: UploadFile = File(...),
@@ -80,7 +81,11 @@ async def create_waypoint_for_tour(
         file_object.write(await audio_file.read())
 
     # Create the waypoint schema and save it to the database
-    waypoint_data = schemas.WaypointCreate(latitude=latitude, longitude=longitude)
+    waypoint_data = schemas.WaypointCreate(
+        name=name,  # Added name
+        latitude=latitude,
+        longitude=longitude,
+    )
     return crud.create_tour_waypoint(
         db=db,
         waypoint=waypoint_data,
@@ -94,6 +99,7 @@ async def create_waypoint_for_tour(
 async def create_waypoint_from_home(
     tour_id: int,
     audio_file: UploadFile = File(...),
+    name: Optional[str] = Form(None),  # Added name field
     address: Optional[str] = Form(None),
     latitude: Optional[float] = Form(None),
     longitude: Optional[float] = Form(None),
@@ -124,7 +130,11 @@ async def create_waypoint_from_home(
     with open(file_location, "wb+") as file_object:
         file_object.write(await audio_file.read())
 
-    waypoint_data = schemas.WaypointCreate(latitude=latitude, longitude=longitude)
+    waypoint_data = schemas.WaypointCreate(
+        name=name or "Unnamed Waypoint",  # Use provided name or default
+        latitude=latitude,
+        longitude=longitude,
+    )
     return crud.create_tour_waypoint(
         db=db,
         waypoint=waypoint_data,

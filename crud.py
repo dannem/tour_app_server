@@ -36,8 +36,12 @@ def create_tour(db: Session, tour: schemas.TourCreate):
 def create_tour_waypoint(
     db: Session, waypoint: schemas.WaypointCreate, tour_id: int, audio_filename: str
 ):
+    # Create waypoint with all fields including name
+    waypoint_dict = waypoint.model_dump(
+        exclude={"address"}
+    )  # Exclude address as it's not in the model
     db_waypoint = models.Waypoint(
-        **waypoint.model_dump(), tour_id=tour_id, audio_filename=audio_filename
+        **waypoint_dict, tour_id=tour_id, audio_filename=audio_filename
     )
     db.add(db_waypoint)
     db.commit()

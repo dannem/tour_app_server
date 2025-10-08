@@ -20,6 +20,7 @@ class Waypoint(Base):
     __tablename__ = "waypoints"
 
     id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=True)  # Added name field
     latitude = Column(Float)
     longitude = Column(Float)
     audio_filename = Column(String, nullable=True)
