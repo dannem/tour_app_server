@@ -11,7 +11,9 @@ class Tour(Base):
     name = Column(String, index=True)
     description = Column(String)
 
-    waypoints = relationship("Waypoint", back_populates="tour")
+    waypoints = relationship(
+        "Waypoint", back_populates="tour", cascade="all, delete-orphan"
+    )
 
 
 class Waypoint(Base):

@@ -89,6 +89,31 @@ def read_tour(tour_id: int, db: Session = Depends(get_db)):
     return db_tour
 
 
+@app.delete("/tours/{tour_id}", status_code=204)
+def delete_tour(tour_id: int, db: Session = Depends(get_db)):
+    """Delete a tour and all its associated waypoints and audio files"""
+    db_tour = crud.get_tour(db, tour_id=tour_id)
+    if db_tour is None:
+        raise HTTPException(status_code=404, detail="Tour not found")
+
+    # Delete associated audio files
+    for waypoint in db_tour.waypoints:
+        if waypoint.audio_filename:
+            file_path = f"uploads/{waypoint.audio_filename}"
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"Deleted audio file: {file_path}")
+                except Exception as e:
+                    print(f"Error deleting file {file_path}: {e}")
+
+    # Delete the tour (waypoints will be cascade deleted)
+    db.delete(db_tour)
+    db.commit()
+
+    return None
+
+
 @app.post("/tours/{tour_id}/waypoints", response_model=schemas.Waypoint)
 async def create_waypoint_for_tour(
     tour_id: int,
